@@ -84,6 +84,10 @@ PRICING = {
         "input": 0 ,  # Free
         "output": 0 , # Free
     },
+    "deepseek-chat": {
+        "input": 0.14 / 1_000_000,  # $0.14 per 1M input tokens
+        "output": 0.56 / 1_000_000, # $0.56 per 1M output tokens
+    },
     # Add other models and their prices here if needed
 }
 

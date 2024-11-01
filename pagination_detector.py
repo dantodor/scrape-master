@@ -88,6 +88,35 @@ def detect_pagination_elements(url: str, indications: str, selected_model: str, 
 
             return parsed_response, token_counts, pagination_price
 
+        elif selected_model == "deepseek-chat":
+            # Use OpenAI API
+            client = OpenAI(api_key=get_api_key('DEEPSEEK_API_KEY'), base_url="https://api.deepseek.com/v1")
+            completion = client.beta.chat.completions.parse(
+                model=selected_model,
+                messages=[
+                    {"role": "system", "content": prompt_pagination},
+                    {"role": "user", "content": markdown_content},
+                ],
+                response_format=PaginationData
+            )
+
+            # Extract the parsed response
+            parsed_response = completion.choices[0].message.parsed
+
+            # Calculate tokens using tiktoken
+            encoder = tiktoken.encoding_for_model("gpt-4o-mini")
+            input_token_count = len(encoder.encode(markdown_content))
+            output_token_count = len(encoder.encode(json.dumps(parsed_response.dict())))
+            token_counts = {
+                "input_tokens": input_token_count,
+                "output_tokens": output_token_count
+            }
+
+            # Calculate the price
+            pagination_price = calculate_pagination_price(token_counts, selected_model)
+
+            return parsed_response, token_counts, pagination_price
+
         elif selected_model == "gemini-1.5-flash":
             # Use Google Gemini API
             genai.configure(api_key=get_api_key("GOOGLE_API_KEY"))
@@ -131,33 +160,33 @@ def detect_pagination_elements(url: str, indications: str, selected_model: str, 
 
             return pagination_data, token_counts, pagination_price
 
-        elif selected_model == "Llama3.1 8B":
-            # Use Llama model via OpenAI API pointing to local server
-            openai.api_key = "lm-studio"
-            openai.api_base = "http://localhost:1234/v1"
-            response = openai.ChatCompletion.create(
-                model=LLAMA_MODEL_FULLNAME,
-                messages=[
-                    {"role": "system", "content": prompt_pagination},
-                    {"role": "user", "content": markdown_content},
-                ],
-                temperature=0.7,
-            )
-            response_content = response['choices'][0]['message']['content'].strip()
-            # Try to parse the JSON
-            try:
-                pagination_data = json.loads(response_content)
-            except json.JSONDecodeError:
-                pagination_data = {"next_buttons": [], "page_urls": []}
-            # Token counts
-            token_counts = {
-                "input_tokens": response['usage']['prompt_tokens'],
-                "output_tokens": response['usage']['completion_tokens']
-            }
-            # Calculate the price
-            pagination_price = calculate_pagination_price(token_counts, selected_model)
+        # elif selected_model == "Llama3.1 8B":
+        #     # Use Llama model via OpenAI API pointing to local server
+        #     openai.api_key = "lm-studio"
+        #     openai.api_base = "http://localhost:1234/v1"
+        #     response = openai.ChatCompletion.create(
+        #         model=LLAMA_MODEL_FULLNAME,
+        #         messages=[
+        #             {"role": "system", "content": prompt_pagination},
+        #             {"role": "user", "content": markdown_content},
+        #         ],
+        #         temperature=0.7,
+        #     )
+        #     response_content = response['choices'][0]['message']['content'].strip()
+        #     # Try to parse the JSON
+        #     try:
+        #         pagination_data = json.loads(response_content)
+        #     except json.JSONDecodeError:
+        #         pagination_data = {"next_buttons": [], "page_urls": []}
+        #     # Token counts
+        #     token_counts = {
+        #         "input_tokens": response['usage']['prompt_tokens'],
+        #         "output_tokens": response['usage']['completion_tokens']
+        #     }
+        #     # Calculate the price
+        #     pagination_price = calculate_pagination_price(token_counts, selected_model)
 
-            return pagination_data, token_counts, pagination_price
+        #     return pagination_data, token_counts, pagination_price
 
         elif selected_model == "Groq Llama3.1 70b":
             # Use Groq client

@@ -223,6 +223,27 @@ def format_data(data, DynamicListingsContainer, DynamicListingModel, selected_mo
         }
         return completion.choices[0].message.parsed, token_counts
 
+    elif selected_model=="deepseek-chat":
+        # Use OpenAI API
+        client = OpenAI(api_key=get_api_key('DEEPSEEK_API_KEY'), base_url="https://api.deepseek.com/v1")
+        completion = client.beta.chat.completions.parse(
+            model=selected_model,
+            messages=[
+                {"role": "system", "content": SYSTEM_MESSAGE},
+                {"role": "user", "content": USER_MESSAGE + data},
+            ],
+            response_format=DynamicListingsContainer
+        )
+        # Calculate tokens using tiktoken
+        encoder = tiktoken.encoding_for_model("gpt-4o-mini")
+        input_token_count = len(encoder.encode(USER_MESSAGE + data))
+        output_token_count = len(encoder.encode(json.dumps(completion.choices[0].message.parsed.dict())))
+        token_counts = {
+            "input_tokens": input_token_count,
+            "output_tokens": output_token_count
+        }
+        return completion.choices[0].message.parsed, token_counts
+
     elif selected_model == "gemini-1.5-flash":
         # Use Google Gemini API
         genai.configure(api_key=get_api_key("GOOGLE_API_KEY"))
